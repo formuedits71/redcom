@@ -1675,7 +1675,9 @@ async def handle_lang_select(query: CallbackQuery) -> None:
     
     await db.set_user_language(telegram_id, lang_code)
     await query.answer()
-    await query.message.edit_text(t(lang_code, "language_set", lang=lang_code))
+    # Map language code to display name
+    lang_names = {"en": "English", "ru": "Русский", "uz": "Ўзбек"}
+    await query.message.edit_text(t(lang_code, "language_set", lang=lang_names.get(lang_code, lang_code)))
 
 
 @router.message(Command("add_sub"))
