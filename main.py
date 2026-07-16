@@ -1000,9 +1000,18 @@ async def _geocode_address_nominatim(
     # Clean address
     cleaned = _clean_address(address)
     
-    # On retry, simplify address (keep only first part)
+    # On retry, simplify address. The first comma-separated segment is often
+    # a business/facility name (e.g. "Isoflex Packaging Pampano Beach FL")
+    # rather than part of the actual street address, so drop it and keep the
+    # rest (street, city, state, zip) instead of keeping only that segment.
     if attempt > 1:
-        cleaned = cleaned.split(",")[0].strip()
+        parts = [p.strip() for p in cleaned.split(",") if p.strip()]
+        if len(parts) > 1:
+            # Only drop the first segment if it doesn't already look like a
+            # street address (i.e. doesn't start with a house/unit number).
+            if not re.match(r"^\d", parts[0]):
+                parts = parts[1:]
+        cleaned = ", ".join(parts)
     
     params = {"q": cleaned, "format": "json", "limit": 1}
     headers = {"User-Agent": USER_AGENT}
