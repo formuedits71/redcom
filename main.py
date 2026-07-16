@@ -70,6 +70,7 @@ BOT_TOKEN: str = os.getenv("BOT_TOKEN", "").strip()
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
 GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip()
 DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
+GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
 ADMIN_ID_RAW: str = os.getenv("ADMIN_ID", "0").strip()
 
 try:
@@ -82,6 +83,11 @@ REQUIRED_ENV = {
     "GEMINI_API_KEY": GEMINI_API_KEY,
     "DATABASE_URL": DATABASE_URL,
 }
+
+if not GOOGLE_MAPS_API_KEY:
+    logging.getLogger("loadconf-bot").warning(
+        "GOOGLE_MAPS_API_KEY is not set — mileage calculation will be skipped for every load."
+    )
 
 # ======================================================================================
 # LOGGING
@@ -950,14 +956,11 @@ def parse_shipment_data(text: str) -> ShipmentData:
 # OPENROUTESERVICE — MILES CALCULATION
 # ======================================================================================
 
-NOMINATIM_GEOCODE_URL = "https://nominatim.openstreetmap.org/search"
-OSRM_ROUTING_URL = "https://router.project-osrm.org/route/v1/driving"
+GOOGLE_DIRECTIONS_URL = "https://maps.googleapis.com/maps/api/directions/json"
 
-# User-Agent for OpenStreetMap (prevent blocking)
+# User-Agent header (Google Maps doesn't require this, but some corporate /
+# hosting-provider networks reject requests with no User-Agent at all).
 USER_AGENT = "LoadConfirmationBot/1.0 (+https://t.me/load_bot)"
-
-# In-memory cache for geocoding results (address -> (lon, lat))
-_geocoding_cache: dict[str, tuple[float, float]] = {}
 
 
 class DistanceCalculationError(Exception):
@@ -975,187 +978,128 @@ def _clean_address(address: str) -> str:
     return cleaned
 
 
-async def _geocode_address_nominatim(
-    session: aiohttp.ClientSession, address: str, attempt: int = 1
-) -> tuple[float, float]:
-    """Geocode address using free Nominatim service.
-    
-    Args:
-        session: aiohttp session
-        address: Address to geocode
-        attempt: Current attempt number (1-3)
-    
-    Returns:
-        Tuple of (longitude, latitude)
-    """
-    if not address or len(address.strip()) < 3:
-        raise DistanceCalculationError(f"Address too short to geocode: '{address}'")
-    
-    # Check cache first
-    cache_key = address.strip()
-    if cache_key in _geocoding_cache:
-        logger.info("[Nominatim] Cache hit for address: %s", address)
-        return _geocoding_cache[cache_key]
-    
-    # Clean address
+def _simplify_address_for_retry(address: str, attempt: int) -> str:
+    """Clean an address, and on retry attempts drop a likely leading
+    business/facility name segment (e.g. "Isoflex Packaging Pampano Beach FL")
+    so the real street address (which usually starts with a house/unit
+    number) is what actually gets sent to Google Maps."""
     cleaned = _clean_address(address)
-    
-    # On retry, simplify address. The first comma-separated segment is often
-    # a business/facility name (e.g. "Isoflex Packaging Pampano Beach FL")
-    # rather than part of the actual street address, so drop it and keep the
-    # rest (street, city, state, zip) instead of keeping only that segment.
     if attempt > 1:
         parts = [p.strip() for p in cleaned.split(",") if p.strip()]
-        if len(parts) > 1:
-            # Only drop the first segment if it doesn't already look like a
-            # street address (i.e. doesn't start with a house/unit number).
-            if not re.match(r"^\d", parts[0]):
-                parts = parts[1:]
+        if len(parts) > 1 and not re.match(r"^\d", parts[0]):
+            parts = parts[1:]
         cleaned = ", ".join(parts)
-    
-    params = {"q": cleaned, "format": "json", "limit": 1}
-    headers = {"User-Agent": USER_AGENT}
+    return cleaned
+
+
+async def _get_driving_distance_meters_google(
+    session: aiohttp.ClientSession, pickup_address: str, delivery_address: str
+) -> float:
+    """Get the shortest driving distance between two addresses using the
+    Google Maps Directions API.
+
+    Google's Directions API geocodes the origin/destination addresses
+    internally, so no separate geocoding step is needed. `alternatives=true`
+    asks Google for every route it knows about between the two points, and
+    we pick the one with the smallest total distance (the "eng yaqin yo'l" /
+    shortest route), matching how the old OSRM logic picked the shortest of
+    multiple candidate routes.
+    """
+    if not GOOGLE_MAPS_API_KEY:
+        raise DistanceCalculationError("GOOGLE_MAPS_API_KEY is not configured.")
+
+    params = {
+        "origin": pickup_address,
+        "destination": delivery_address,
+        "mode": "driving",
+        "alternatives": "true",
+        "key": GOOGLE_MAPS_API_KEY,
+    }
+
     try:
         async with session.get(
-            NOMINATIM_GEOCODE_URL, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
+            GOOGLE_DIRECTIONS_URL, params=params, timeout=aiohttp.ClientTimeout(total=20)
         ) as resp:
             if resp.status != 200:
                 raise DistanceCalculationError(
-                    f"Nominatim geocoding failed with status {resp.status} for '{address}'."
+                    f"Google Directions request failed with status {resp.status}."
                 )
             payload = await resp.json()
-            if not payload or len(payload) == 0:
-                raise DistanceCalculationError(f"No geocoding result for address: '{address}'.")
-            
-            result = payload[0]
-            lon = float(result["lon"])
-            lat = float(result["lat"])
-            
-            # Cache the result
-            _geocoding_cache[cache_key] = (lon, lat)
-            logger.info("[Nominatim] Geocoded '%s' -> (%.4f, %.4f)", address, lon, lat)
-            return lon, lat
-    except asyncio.TimeoutError:
-        raise DistanceCalculationError(f"Nominatim request timeout for address: '{address}'")
-    except (KeyError, ValueError) as exc:
-        raise DistanceCalculationError(f"Invalid Nominatim response for address '{address}': {exc}")
+            status = payload.get("status")
+            if status != "OK":
+                error_msg = payload.get("error_message", status)
+                raise DistanceCalculationError(f"Google Directions error ({status}): {error_msg}")
 
-
-async def _get_driving_distance_meters_osrm(
-    session: aiohttp.ClientSession, start: tuple[float, float], end: tuple[float, float]
-) -> float:
-    """Get driving distance using free OSRM service.
-    
-    Args:
-        session: aiohttp session
-        start: Tuple of (longitude, latitude) for start point
-        end: Tuple of (longitude, latitude) for end point
-    
-    Returns:
-        Distance in meters
-    """
-    # OSRM expects coordinates as lon,lat;lon,lat
-    coords = f"{start[0]},{start[1]};{end[0]},{end[1]}"
-    url = f"{OSRM_ROUTING_URL}/{coords}"
-    params = {"overview": "false"}
-    
-    try:
-        async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=20)) as resp:
-            if resp.status != 200:
-                raise DistanceCalculationError(f"OSRM request failed with status {resp.status}.")
-            payload = await resp.json()
-            
-            # Check if request was successful
-            if payload.get("code") != "Ok":
-                raise DistanceCalculationError(f"OSRM error: {payload.get('code', 'unknown')}")
-            
             routes = payload.get("routes") or []
             if not routes:
                 raise DistanceCalculationError("No route found between the two addresses.")
-            
-            # Choose shortest route if multiple exist
-            shortest_route = min(routes, key=lambda r: r.get("distance", float("inf")))
-            distance_meters = shortest_route.get("distance", 0)
-            logger.info("[OSRM] Selected route distance: %.2f meters", distance_meters)
+
+            def _route_distance_meters(route: dict) -> float:
+                return sum(
+                    leg.get("distance", {}).get("value", 0) for leg in route.get("legs", [])
+                )
+
+            shortest_route = min(routes, key=_route_distance_meters)
+            distance_meters = _route_distance_meters(shortest_route)
+            if distance_meters <= 0:
+                raise DistanceCalculationError("Google Directions returned zero distance.")
+
+            logger.info(
+                "[GoogleMaps] Selected shortest route: %.2f meters out of %d candidate route(s)",
+                distance_meters,
+                len(routes),
+            )
             return float(distance_meters)
     except asyncio.TimeoutError:
-        raise DistanceCalculationError("OSRM request timeout")
+        raise DistanceCalculationError("Google Directions request timeout")
 
 
 async def calculate_miles(pickup_address: str, delivery_address: str) -> Optional[int]:
-    """Calculate driving distance in miles using Nominatim + OSRM.
-    
-    Uses free OpenStreetMap services with up to 3 retry attempts.
-    Returns None only if all attempts fail.
+    """Calculate driving distance in miles using the Google Maps Directions API.
+
+    Picks the shortest of the candidate routes Google returns between the
+    pickup and delivery addresses. Retries up to 3 times; from the 2nd
+    attempt onward a likely business-name prefix is dropped from each
+    address in case that's what's preventing a match.
     """
     if not pickup_address or not delivery_address:
         logger.warning("[Miles] Missing addresses for calculation")
         return None
-    
+
+    if not GOOGLE_MAPS_API_KEY:
+        logger.error("[Miles] GOOGLE_MAPS_API_KEY is not configured; cannot calculate miles.")
+        return None
+
     start_time = datetime.now(timezone.utc)
     max_attempts = 3
-    
+    headers = {"User-Agent": USER_AGENT}
+
     for attempt in range(1, max_attempts + 1):
+        pickup_query = _simplify_address_for_retry(pickup_address, attempt)
+        delivery_query = _simplify_address_for_retry(delivery_address, attempt)
         try:
             logger.info("[Miles] Attempt %d/%d to calculate distance", attempt, max_attempts)
-            async with aiohttp.ClientSession() as session:
-                # Geocode pickup address
-                try:
-                    pickup_lon, pickup_lat = await _geocode_address_nominatim(
-                        session, pickup_address, attempt=attempt
-                    )
-                    logger.info("[Miles] Pickup coordinates: (%.4f, %.4f)", pickup_lon, pickup_lat)
-                except DistanceCalculationError as exc:
-                    if attempt < max_attempts:
-                        logger.warning("[Miles] Geocoding pickup failed (attempt %d): %s, retrying...", attempt, exc)
-                        await asyncio.sleep(0.5)
-                        continue
-                    else:
-                        raise
-                
-                # Geocode delivery address
-                try:
-                    delivery_lon, delivery_lat = await _geocode_address_nominatim(
-                        session, delivery_address, attempt=attempt
-                    )
-                    logger.info("[Miles] Delivery coordinates: (%.4f, %.4f)", delivery_lon, delivery_lat)
-                except DistanceCalculationError as exc:
-                    if attempt < max_attempts:
-                        logger.warning("[Miles] Geocoding delivery failed (attempt %d): %s, retrying...", attempt, exc)
-                        await asyncio.sleep(0.5)
-                        continue
-                    else:
-                        raise
-                
-                # Get driving distance
-                try:
-                    distance_meters = await _get_driving_distance_meters_osrm(
-                        session, (pickup_lon, pickup_lat), (delivery_lon, delivery_lat)
-                    )
-                except DistanceCalculationError as exc:
-                    if attempt < max_attempts:
-                        logger.warning("[Miles] Routing failed (attempt %d): %s, retrying...", attempt, exc)
-                        await asyncio.sleep(0.5)
-                        continue
-                    else:
-                        raise
-                
-                # Calculate miles and round to nearest whole number
-                miles = int(round(distance_meters / 1609.344))
-                elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
-                logger.info(
-                    "[Miles] Successfully calculated distance: %d miles (%.2f seconds, %.0f meters)",
-                    miles,
-                    elapsed,
-                    distance_meters,
+            async with aiohttp.ClientSession(headers=headers) as session:
+                distance_meters = await _get_driving_distance_meters_google(
+                    session, pickup_query, delivery_query
                 )
-                return miles
-        
+
+            # Calculate miles and round to nearest whole number
+            miles = int(round(distance_meters / 1609.344))
+            elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
+            logger.info(
+                "[Miles] Successfully calculated distance: %d miles (%.2f seconds, %.0f meters)",
+                miles,
+                elapsed,
+                distance_meters,
+            )
+            return miles
+
         except DistanceCalculationError as exc:
             logger.warning("[Miles] Attempt %d failed: %s", attempt, exc)
             if attempt < max_attempts:
                 await asyncio.sleep(0.5)  # Brief delay before retry
-    
+
     logger.error("[Miles] Failed to calculate distance after %d attempts", max_attempts)
     return None
 
