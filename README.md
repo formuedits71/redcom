@@ -260,7 +260,7 @@ connection string.
 |-------------------|-----------------------------------------------------------|
 | `BOT_TOKEN`       | Telegram bot token from BotFather                          |
 | `GEMINI_API_KEY`  | Google Gemini API key from AI Studio                        |
-| `ORS_API_KEY`     | OpenRouteService API key                                    |
+| `GEMINI_MODEL`    | Gemini model name (default: `gemini-3.5-flash`)            |
 | `DATABASE_URL`    | PostgreSQL connection string                                |
 | `ADMIN_ID`        | Your numeric Telegram ID (enables `/admin`, `/clearcache`)  |
 
