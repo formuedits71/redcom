@@ -140,6 +140,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "delete_template_prompt": "Send the Telegram ID of the user whose template you want to delete.",
         "view_template_prompt": "Send the Telegram ID of the user whose template you want to view.",
         "admin_action_done": "✅ Done.",
+        "choose_language": "🌐 Choose language / Выберите язык / Tilni tanlang",
+        "language_set": "✅ Language set to {lang}",
+        "subscription_required": "⛔ You must subscribe to {channel} to use this bot.",
+        "admin_menu": "🛠️ <b>Admin Panel</b>\n\n<b>Subscriptions:</b>\n/add_sub - add mandatory subscription\n/remove_sub - remove subscription\n/list_subs - list subscriptions\n\n<b>Other:</b>\n/broadcast - broadcast message\n/search - search user\n/clearcache - clear cache",
+        "add_sub_prompt": "📌 Send chat_id of channel/group to add as mandatory subscription.",
+        "remove_sub_prompt": "🗑️ Send chat_id to remove from subscriptions.",
+        "sub_added": "✅ Subscription added: {chat_id}",
+        "sub_removed": "✅ Subscription removed: {chat_id}",
+        "list_subs": "📋 Mandatory subscriptions:\n{subs}",
     },
     "ru": {
         "start_welcome": "👋 Добро пожаловать в Load Confirmation Bot!\n\nЯ превращаю ваши PDF rate confirmation в готовый Load Confirmation в вашем собственном формате.",
@@ -177,6 +186,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "delete_template_prompt": "Отправьте Telegram ID пользователя, чей шаблон нужно удалить.",
         "view_template_prompt": "Отправьте Telegram ID пользователя, чей шаблон нужно посмотреть.",
         "admin_action_done": "✅ Готово.",
+        "choose_language": "🌐 Выберите язык / Choose language / Tilni tanlang",
+        "language_set": "✅ Язык установлен на {lang}",
+        "subscription_required": "⛔ Вы должны подписаться на {channel} для использования этого бота.",
+        "admin_menu": "🛠️ <b>Админ-панель</b>\n\n<b>Подписки:</b>\n/add_sub - добавить обязательную подписку\n/remove_sub - удалить подписку\n/list_subs - список подписок\n\n<b>Другое:</b>\n/broadcast - рассылка\n/search - поиск пользователя\n/clearache - очистить кэш",
+        "add_sub_prompt": "📌 Отправьте chat_id канала/группы для добавления как обязательную подписку.",
+        "remove_sub_prompt": "🗑️ Отправьте chat_id для удаления из подписок.",
+        "sub_added": "✅ Подписка добавлена: {chat_id}",
+        "sub_removed": "✅ Подписка удалена: {chat_id}",
+        "list_subs": "📋 Обязательные подписки:\n{subs}",
     },
     "uz": {
         "start_welcome": "👋 Load Confirmation Bot-ga xush kelibsiz!\n\nMen sizning PDF rate confirmation hujjatingizni o'z formatingizda tayyor Load Confirmation-ga aylantiraman.",
@@ -214,6 +232,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "delete_template_prompt": "Shablonini o'chirish kerak bo'lgan foydalanuvchining Telegram ID sini yuboring.",
         "view_template_prompt": "Shablonini ko'rish kerak bo'lgan foydalanuvchining Telegram ID sini yuboring.",
         "admin_action_done": "✅ Bajarildi.",
+        "choose_language": "🌐 Tilni tanlang / Choose language / Выберите язык",
+        "language_set": "✅ Til {lang} ga o'rnatildi",
+        "subscription_required": "⛔ Ushbu botdan foydalanish uchun {channel} ga obuna bo'lishingiz kerak.",
+        "admin_menu": "🛠️ <b>Admin paneli</b>\n\n<b>Obunalar:</b>\n/add_sub - majburiy obuna qo'shish\n/remove_sub - obunani o'chirish\n/list_subs - obunalar ro'yxati\n\n<b>Boshqalar:</b>\n/broadcast - tarqatib yuborish\n/search - foydalanuvchini qidirish\n/clearcache - keshni tozalash",
+        "add_sub_prompt": "📌 Kanal/guruhning chat_id sini yuboring majburiy obuna qo'shish uchun.",
+        "remove_sub_prompt": "🗑️ Obunadan o'chirish uchun chat_id yuboring.",
+        "sub_added": "✅ Obuna qo'shildi: {chat_id}",
+        "sub_removed": "✅ Obuna o'chirildi: {chat_id}",
+        "list_subs": "📋 Majburiy obunalar:\n{subs}",
     },
 }
 
@@ -298,6 +325,27 @@ class Database:
                     id SERIAL PRIMARY KEY,
                     telegram_id BIGINT UNIQUE NOT NULL,
                     template TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS subscriptions (
+                    id SERIAL PRIMARY KEY,
+                    chat_id BIGINT NOT NULL,
+                    chat_type TEXT NOT NULL,
+                    required BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_languages (
+                    id SERIAL PRIMARY KEY,
+                    telegram_id BIGINT UNIQUE NOT NULL,
+                    language TEXT DEFAULT 'en',
                     updated_at TIMESTAMP DEFAULT NOW()
                 );
                 """
@@ -404,6 +452,74 @@ class Database:
                     "SELECT COUNT(*) FROM users WHERE joined_at::date = NOW()::date;"
                 )
 
+        return await self._execute_with_retry(_run)
+
+    # ---------------------------------------------------------- subscriptions --
+
+    async def add_subscription(self, chat_id: int, chat_type: str, required: bool = False) -> None:
+        """Add a mandatory subscription channel or group."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                await conn.execute(
+                    """
+                    INSERT INTO subscriptions (chat_id, chat_type, required)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT DO NOTHING;
+                    """,
+                    chat_id, chat_type, required
+                )
+        return await self._execute_with_retry(_run)
+
+    async def remove_subscription(self, chat_id: int) -> None:
+        """Remove a subscription."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                await conn.execute("DELETE FROM subscriptions WHERE chat_id = $1;", chat_id)
+        return await self._execute_with_retry(_run)
+
+    async def get_subscriptions(self) -> list[dict]:
+        """Get all subscriptions."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                rows = await conn.fetch("SELECT * FROM subscriptions;")
+                return [dict(row) for row in rows]
+        return await self._execute_with_retry(_run)
+
+    async def get_subscriptions_by_type(self, required: bool) -> list[int]:
+        """Get all subscription chat IDs by type (required or optional)."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                rows = await conn.fetch(
+                    "SELECT chat_id FROM subscriptions WHERE required = $1;", required
+                )
+                return [r["chat_id"] for r in rows]
+        return await self._execute_with_retry(_run)
+
+    # ---------------------------------------------------------- user languages --
+
+    async def set_user_language(self, telegram_id: int, language: str) -> None:
+        """Set user's language preference."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                await conn.execute(
+                    """
+                    INSERT INTO user_languages (telegram_id, language)
+                    VALUES ($1, $2)
+                    ON CONFLICT (telegram_id) DO UPDATE
+                    SET language = EXCLUDED.language, updated_at = NOW();
+                    """,
+                    telegram_id, language
+                )
+        return await self._execute_with_retry(_run)
+
+    async def get_user_language_pref(self, telegram_id: int) -> str:
+        """Get user's preferred language."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                row = await conn.fetchrow(
+                    "SELECT language FROM user_languages WHERE telegram_id = $1;", telegram_id
+                )
+                return row["language"] if row else "en"
         return await self._execute_with_retry(_run)
 
     async def export_users(self) -> list[asyncpg.Record]:
@@ -837,6 +953,9 @@ def parse_shipment_data(text: str) -> ShipmentData:
 NOMINATIM_GEOCODE_URL = "https://nominatim.openstreetmap.org/search"
 OSRM_ROUTING_URL = "https://router.project-osrm.org/route/v1/driving"
 
+# User-Agent for OpenStreetMap (prevent blocking)
+USER_AGENT = "LoadConfirmationBot/1.0 (+https://t.me/load_bot)"
+
 # In-memory cache for geocoding results (address -> (lon, lat))
 _geocoding_cache: dict[str, tuple[float, float]] = {}
 
@@ -886,9 +1005,10 @@ async def _geocode_address_nominatim(
         cleaned = cleaned.split(",")[0].strip()
     
     params = {"q": cleaned, "format": "json", "limit": 1}
+    headers = {"User-Agent": USER_AGENT}
     try:
         async with session.get(
-            NOMINATIM_GEOCODE_URL, params=params, timeout=aiohttp.ClientTimeout(total=15)
+            NOMINATIM_GEOCODE_URL, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=15)
         ) as resp:
             if resp.status != 200:
                 raise DistanceCalculationError(
@@ -1124,7 +1244,11 @@ def _try_parse_json(raw: str) -> Optional[dict]:
 
 
 async def _repair_json_via_gemini(gemini_client: genai.Client, broken_json: str) -> Optional[dict]:
-    """Ask Gemini to repair invalid JSON. Returns parsed dict or None if repair fails."""
+    """Ask Gemini to repair invalid JSON. Returns parsed dict or None if repair fails.
+    
+    Note: JSON repair is a best-effort attempt. If it fails for any reason,
+    we silently return None and let the caller decide the next action.
+    """
     repair_prompt = (
         "You returned invalid JSON. Fix it and return ONLY valid JSON.\n"
         "No markdown.\nNo explanation.\nNo comments.\nOnly one valid JSON object.\n\n"
@@ -1146,8 +1270,11 @@ async def _repair_json_via_gemini(gemini_client: genai.Client, broken_json: str)
             repaired_text = _strip_json_fences(response.text)
             logger.info("[Gemini] Attempted JSON repair")
             return _try_parse_json(repaired_text)
+    except asyncio.TimeoutError:
+        logger.warning("[Gemini] JSON repair timed out after 30 seconds")
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[Gemini] JSON repair attempt failed: %s", exc)
+        # Catch all exceptions including network errors from google-genai
+        logger.warning("[Gemini] JSON repair failed (will skip repair): %s", type(exc).__name__)
     return None
 
 
@@ -1246,19 +1373,36 @@ async def extract_shipment_via_gemini_pdf(pdf_bytes: bytes) -> ShipmentData:
             logger.info("[Gemini] Extraction succeeded on attempt %d", attempt + 1)
             return _shipment_from_gemini_json(payload)
 
-        except (asyncio.TimeoutError, Exception) as exc:  # noqa: BLE001
+        except asyncio.TimeoutError as exc:  # noqa: BLE001
             last_error = exc
             if attempt < len(RETRY_DELAYS):
                 delay = RETRY_DELAYS[attempt]
                 logger.warning(
-                    "[Gemini] Extraction failed on attempt %d, retrying in %d seconds: %s",
+                    "[Gemini] Extraction timed out on attempt %d, retrying in %d seconds",
                     attempt + 1,
                     delay,
-                    exc,
                 )
                 await asyncio.sleep(delay)
             else:
-                logger.error("[Gemini] Extraction failed after all 6 attempts: %s", exc)
+                logger.error("[Gemini] Extraction timed out after all 6 attempts")
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            exc_type = type(exc).__name__
+            if attempt < len(RETRY_DELAYS):
+                delay = RETRY_DELAYS[attempt]
+                logger.warning(
+                    "[Gemini] Extraction failed on attempt %d (%s), retrying in %d seconds",
+                    attempt + 1,
+                    exc_type,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.error(
+                    "[Gemini] Extraction failed after all 6 attempts (%s): %s",
+                    exc_type,
+                    str(exc)[:100],
+                )
 
     raise GeminiExtractionError(f"Gemini PDF extraction exhausted all retries: {last_error}") from last_error
 
@@ -1309,19 +1453,36 @@ async def generate_load_confirmation(template: str, data: ShipmentData) -> str:
                 raise GeminiError("Empty response from Gemini.")
             logger.info("[Gemini] Generation succeeded on attempt %d", attempt + 1)
             return response.text.strip()
-        except (asyncio.TimeoutError, GeminiError, Exception) as exc:  # noqa: BLE001
+        except asyncio.TimeoutError as exc:  # noqa: BLE001
             last_error = exc
             if attempt < len(RETRY_DELAYS):
                 delay = RETRY_DELAYS[attempt]
                 logger.warning(
-                    "[Gemini] Generation failed on attempt %d, retrying in %d seconds: %s",
+                    "[Gemini] Generation timed out on attempt %d, retrying in %d seconds",
                     attempt + 1,
                     delay,
-                    exc,
                 )
                 await asyncio.sleep(delay)
             else:
-                logger.error("[Gemini] Generation failed after all 6 attempts: %s", exc)
+                logger.error("[Gemini] Generation timed out after all 6 attempts")
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            exc_type = type(exc).__name__
+            if attempt < len(RETRY_DELAYS):
+                delay = RETRY_DELAYS[attempt]
+                logger.warning(
+                    "[Gemini] Generation failed on attempt %d (%s), retrying in %d seconds",
+                    attempt + 1,
+                    exc_type,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.error(
+                    "[Gemini] Generation failed after all 6 attempts (%s): %s",
+                    exc_type,
+                    str(exc)[:100],
+                )
 
     raise GeminiError(f"Gemini generation exhausted all retries: {last_error}") from last_error
 
@@ -1346,6 +1507,9 @@ class BotStates(StatesGroup):
     admin_waiting_search = State()
     admin_waiting_delete_template = State()
     admin_waiting_view_template = State()
+    admin_waiting_add_sub = State()
+    admin_waiting_remove_sub = State()
+    choosing_language = State()
 
 
 # ======================================================================================
@@ -1438,6 +1602,7 @@ async def safe_send(chat_id: int, text: str, **kwargs: Any) -> bool:
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
+    """Start command - shows different menu based on user role."""
     await state.clear()
     telegram_id = message.from_user.id
     language = normalize_language(message.from_user.language_code)
@@ -1448,8 +1613,29 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         first_name=message.from_user.first_name,
         language=language,
     )
+    
+    # Save language preference
+    await db.set_user_language(telegram_id, language)
 
     await message.answer(t(language, "start_welcome"))
+    
+    # Show role-based commands menu
+    is_admin = telegram_id == ADMIN_ID
+    commands_text = "📋 <b>Komandalar / Commands / Команды:</b>\n\n"
+    commands_text += "/help - " + ("Help (English)" if language == "en" else "Помощь (Русский)" if language == "ru" else "Yordam (Uzbek)") + "\n"
+    commands_text += "/lang - " + ("Change language" if language == "en" else "Изменить язык" if language == "ru" else "Tilni o'zgartirish") + "\n"
+    commands_text += "/template - " + ("View/Set template" if language == "en" else "Просмотр/Установка шаблона" if language == "ru" else "Shablonni ko'rish/o'rnatish") + "\n"
+    commands_text += "/delete - " + ("Delete template" if language == "en" else "Удалить шаблон" if language == "ru" else "Shablonni o'chirish") + "\n"
+    
+    if is_admin:
+        commands_text += "\n🛠️ <b>Admin Commands:</b>\n"
+        commands_text += "/add_sub - Add subscription\n"
+        commands_text += "/remove_sub - Remove subscription\n"
+        commands_text += "/list_subs - List subscriptions\n"
+        commands_text += "/broadcast - Broadcast message\n"
+        commands_text += "/clearcache - Clear cache\n"
+    
+    await message.answer(commands_text, parse_mode="HTML")
 
     template = await get_effective_template(telegram_id)
     if template:
@@ -1460,10 +1646,125 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
         await state.set_state(BotStates.waiting_for_template)
 
 
+@router.message(Command("lang"))
+async def cmd_lang(message: Message, state: FSMContext) -> None:
+    """Language selection command."""
+    telegram_id = message.from_user.id
+    current_lang = await db.get_user_language_pref(telegram_id)
+    
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="🇬🇧 English", callback_data="lang_en"),
+                InlineKeyboardButton(text="🇷🇺 Русский", callback_data="lang_ru"),
+            ],
+            [
+                InlineKeyboardButton(text="🇺🇿 Ўзбек", callback_data="lang_uz"),
+            ],
+        ]
+    )
+    
+    await message.answer(t(current_lang, "choose_language"), reply_markup=keyboard)
+
+
+@router.callback_query(F.data.startswith("lang_"))
+async def handle_lang_select(query: CallbackQuery) -> None:
+    """Handle language selection."""
+    lang_code = query.data.split("_")[1]
+    telegram_id = query.from_user.id
+    
+    await db.set_user_language(telegram_id, lang_code)
+    await query.answer()
+    await query.message.edit_text(t(lang_code, "language_set", lang=lang_code))
+
+
+@router.message(Command("add_sub"))
+async def cmd_add_sub(message: Message, state: FSMContext) -> None:
+    """Admin: add mandatory subscription."""
+    if message.from_user.id != ADMIN_ID:
+        language = await db.get_user_language(message.from_user.id)
+        await message.answer(t(language, "admin_denied"))
+        return
+    
+    language = await db.get_user_language(ADMIN_ID)
+    await message.answer(t(language, "add_sub_prompt"))
+    await state.set_state(BotStates.admin_waiting_add_sub)
+
+
+@router.message(BotStates.admin_waiting_add_sub, F.text)
+async def handle_add_sub(message: Message, state: FSMContext) -> None:
+    """Process subscription addition."""
+    language = await db.get_user_language(ADMIN_ID)
+    
+    try:
+        chat_id = int(message.text.strip())
+        await db.add_subscription(chat_id, "channel", required=True)
+        await message.answer(t(language, "sub_added", chat_id=chat_id))
+    except ValueError:
+        await message.answer("❌ Invalid chat_id. Please send a number.")
+        return
+    
+    await state.clear()
+
+
+@router.message(Command("remove_sub"))
+async def cmd_remove_sub(message: Message, state: FSMContext) -> None:
+    """Admin: remove subscription."""
+    if message.from_user.id != ADMIN_ID:
+        language = await db.get_user_language(message.from_user.id)
+        await message.answer(t(language, "admin_denied"))
+        return
+    
+    language = await db.get_user_language(ADMIN_ID)
+    await message.answer(t(language, "remove_sub_prompt"))
+    await state.set_state(BotStates.admin_waiting_remove_sub)
+
+
+@router.message(BotStates.admin_waiting_remove_sub, F.text)
+async def handle_remove_sub(message: Message, state: FSMContext) -> None:
+    """Process subscription removal."""
+    language = await db.get_user_language(ADMIN_ID)
+    
+    try:
+        chat_id = int(message.text.strip())
+        await db.remove_subscription(chat_id)
+        await message.answer(t(language, "sub_removed", chat_id=chat_id))
+    except ValueError:
+        await message.answer("❌ Invalid chat_id. Please send a number.")
+        return
+    
+    await state.clear()
+
+
+@router.message(Command("list_subs"))
+async def cmd_list_subs(message: Message) -> None:
+    """Admin: list all subscriptions."""
+    if message.from_user.id != ADMIN_ID:
+        language = await db.get_user_language(message.from_user.id)
+        await message.answer(t(language, "admin_denied"))
+        return
+    
+    language = await db.get_user_language(ADMIN_ID)
+    subs = await db.get_subscriptions()
+    
+    if not subs:
+        await message.answer("📋 No subscriptions configured.")
+        return
+    
+    subs_text = "\n".join([f"• {s['chat_id']} ({s['chat_type']})" for s in subs])
+    await message.answer(t(language, "list_subs", subs=subs_text))
+
+
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     language = await db.get_user_language(message.from_user.id)
-    await message.answer(t(language, "help_text"))
+    is_admin = message.from_user.id == ADMIN_ID
+    
+    help_text = t(language, "help_text")
+    if is_admin:
+        help_text += "\n\n" + t(language, "admin_menu")
+    
+    await message.answer(help_text)
 
 
 @router.message(Command("template"))
