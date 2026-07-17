@@ -41,6 +41,7 @@ import fitz  # PyMuPDF
 import pdfplumber
 from google import genai
 from google.genai import types as genai_types
+from google.genai import errors as genai_errors
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher, F, Router
@@ -68,7 +69,7 @@ load_dotenv()
 
 BOT_TOKEN: str = os.getenv("BOT_TOKEN", "").strip()
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip()
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite").strip()
 DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
 ADMIN_ID_RAW: str = os.getenv("ADMIN_ID", "0").strip()
 
@@ -1360,6 +1361,27 @@ def _shipment_from_gemini_json(payload: dict) -> ShipmentData:
     return data
 
 
+def _is_quota_exhausted(exc: Exception) -> bool:
+    """True if this is a Gemini 429 RESOURCE_EXHAUSTED quota error.
+
+    These happen when the API key's daily/per-minute request quota (e.g. the
+    free tier's 20 requests/day limit for a model) has been used up.
+    Retrying with exponential backoff is pointless here: the quota won't
+    reset in the ~60s the backoff schedule covers, so we should fail fast
+    and let the caller fall back to regex extraction immediately instead of
+    burning a full minute of retries on every single PDF.
+    """
+    code = getattr(exc, "code", None)
+    status = getattr(exc, "status", "") or ""
+    message = str(exc)
+    return (
+        code == 429
+        or "RESOURCE_EXHAUSTED" in status
+        or "RESOURCE_EXHAUSTED" in message
+        or "exceeded your current quota" in message
+    )
+
+
 async def extract_shipment_via_gemini_pdf(pdf_bytes: bytes) -> ShipmentData:
     """PRIMARY shipment-data extraction method with exponential backoff retry.
 
@@ -1427,6 +1449,15 @@ async def extract_shipment_via_gemini_pdf(pdf_bytes: bytes) -> ShipmentData:
         except Exception as exc:  # noqa: BLE001
             last_error = exc
             exc_type = type(exc).__name__
+            if _is_quota_exhausted(exc):
+                logger.error(
+                    "[Gemini] Extraction stopped early on attempt %d: quota exhausted (%s). "
+                    "Not retrying — this won't clear within the backoff window. "
+                    "Check plan/billing at https://ai.dev/rate-limit",
+                    attempt + 1,
+                    str(exc)[:150],
+                )
+                break
             if attempt < len(RETRY_DELAYS):
                 delay = RETRY_DELAYS[attempt]
                 logger.warning(
@@ -1507,6 +1538,15 @@ async def generate_load_confirmation(template: str, data: ShipmentData) -> str:
         except Exception as exc:  # noqa: BLE001
             last_error = exc
             exc_type = type(exc).__name__
+            if _is_quota_exhausted(exc):
+                logger.error(
+                    "[Gemini] Generation stopped early on attempt %d: quota exhausted (%s). "
+                    "Not retrying — this won't clear within the backoff window. "
+                    "Check plan/billing at https://ai.dev/rate-limit",
+                    attempt + 1,
+                    str(exc)[:150],
+                )
+                break
             if attempt < len(RETRY_DELAYS):
                 delay = RETRY_DELAYS[attempt]
                 logger.warning(
