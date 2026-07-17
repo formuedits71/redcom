@@ -69,7 +69,7 @@ load_dotenv()
 
 BOT_TOKEN: str = os.getenv("BOT_TOKEN", "").strip()
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite").strip()
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip()
 DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
 ADMIN_ID_RAW: str = os.getenv("ADMIN_ID", "0").strip()
 
