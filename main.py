@@ -69,7 +69,7 @@ load_dotenv()
 
 BOT_TOKEN: str = os.getenv("BOT_TOKEN", "").strip()
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash").strip()
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip()
 DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
 ADMIN_ID_RAW: str = os.getenv("ADMIN_ID", "0").strip()
 
@@ -175,7 +175,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "need_template_first": "Сначала настроим шаблон. Пришлите ваш шаблон Load Confirmation в виде текста.",
         "ors_error": "❌ Не удалось рассчитать пробег для этих адресов. Проверьте адреса погрузки/выгрузки в PDF.",
         "gemini_error": "❌ Не удалось сгенерировать Load Confirmation (ошибка ИИ-сервиса). Попробуйте ещё раз.",
-        "generic_error": "❌ Произошла ошибка при обработке запроса. Попробуйте снова.",
+        "generic_error": "❌ Произошла ��шибка при обработке запроса. Попробуйте снова.",
         "result_ready": "✅ Ваш Load Confirmation готов:",
         "extracted_missing": "⚠️ Некоторые поля не найдены в PDF и оставлены пустыми. Проверьте результат.",
         "admin_panel_title": "🛠️ <b>Панель администратора</b>",
