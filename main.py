@@ -2365,6 +2365,7 @@ def validate_environment() -> None:
 
 async def on_startup() -> None:
     logger.info("Starting Load Confirmation Bot...")
+    logger.info("Gemini model in use: %s", GEMINI_MODEL_NAME)
     await db.connect()
     logger.info("Bot startup complete.")
 
