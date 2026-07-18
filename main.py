@@ -58,7 +58,9 @@ from aiogram.types import (
     Document,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    KeyboardButton,
     Message,
+    ReplyKeyboardMarkup,
 )
 
 # ======================================================================================
@@ -145,11 +147,19 @@ TEXTS: dict[str, dict[str, str]] = {
         "language_set": "✅ Language set to {lang}",
         "subscription_required": "⛔ You must subscribe to {channel} to use this bot.",
         "admin_menu": "🛠️ <b>Admin Panel</b>\n\n<b>Subscriptions:</b>\n/add_sub - add mandatory subscription\n/remove_sub - remove subscription\n/list_subs - list subscriptions\n\n<b>Other:</b>\n/broadcast - broadcast message\n/search - search user\n/clearcache - clear cache",
-        "add_sub_prompt": "📌 Send chat_id of channel/group to add as mandatory subscription.",
+        "add_sub_prompt": "📌 Send chat_id of the channel/group to add as a mandatory subscription.\n\n⚠️ First add this bot as an admin of that channel/group (needed to check membership and to create an invite link), then send its numeric ID (e.g. -1001234567890).",
         "remove_sub_prompt": "🗑️ Send chat_id to remove from subscriptions.",
         "sub_added": "✅ Subscription added: {chat_id}",
         "sub_removed": "✅ Subscription removed: {chat_id}",
         "list_subs": "📋 Mandatory subscriptions:\n{subs}",
+        "check_subscription_button": "✅ I've joined — Check again",
+        "still_not_subscribed": "⛔ You still haven't joined all the required channels/groups.",
+        "subscription_confirmed": "✅ Thanks! You can continue now.",
+        "btn_template": "📋 Template",
+        "btn_delete": "🗑 Delete template",
+        "btn_lang": "🌐 Language",
+        "btn_help": "❓ Help",
+        "btn_admin": "🛠 Admin Panel",
     },
     "ru": {
         "start_welcome": "👋 Добро пожаловать в Load Confirmation Bot!\n\nЯ превращаю ваши PDF rate confirmation в готовый Load Confirmation в вашем собственном формате.",
@@ -191,11 +201,19 @@ TEXTS: dict[str, dict[str, str]] = {
         "language_set": "✅ Язык установлен на {lang}",
         "subscription_required": "⛔ Вы должны подписаться на {channel} для использования этого бота.",
         "admin_menu": "🛠️ <b>Админ-панель</b>\n\n<b>Подписки:</b>\n/add_sub - добавить обязательную подписку\n/remove_sub - удалить подписку\n/list_subs - список подписок\n\n<b>Другое:</b>\n/broadcast - рассылка\n/search - поиск пользователя\n/clearache - очистить кэш",
-        "add_sub_prompt": "📌 Отправьте chat_id канала/группы для добавления как обязательную подписку.",
+        "add_sub_prompt": "📌 Отправьте chat_id канала/группы для добавления как обязательную подписку.\n\n⚠️ Сначала добавьте этого бота администратором в этот канал/группу (нужно для проверки подписки и создания ссылки-приглашения), затем отправьте его числовой ID (например, -1001234567890).",
         "remove_sub_prompt": "🗑️ Отправьте chat_id для удаления из подписок.",
         "sub_added": "✅ Подписка добавлена: {chat_id}",
         "sub_removed": "✅ Подписка удалена: {chat_id}",
         "list_subs": "📋 Обязательные подписки:\n{subs}",
+        "check_subscription_button": "✅ Я подписался — Проверить снова",
+        "still_not_subscribed": "⛔ Вы ещё не подписались на все обязательные каналы/группы.",
+        "subscription_confirmed": "✅ Спасибо! Теперь вы можете продолжить.",
+        "btn_template": "📋 Шаблон",
+        "btn_delete": "🗑 Удалить шаблон",
+        "btn_lang": "🌐 Язык",
+        "btn_help": "❓ Помощь",
+        "btn_admin": "🛠 Админ-панель",
     },
     "uz": {
         "start_welcome": "👋 Load Confirmation Bot-ga xush kelibsiz!\n\nMen sizning PDF rate confirmation hujjatingizni o'z formatingizda tayyor Load Confirmation-ga aylantiraman.",
@@ -237,11 +255,19 @@ TEXTS: dict[str, dict[str, str]] = {
         "language_set": "✅ Til {lang} ga o'rnatildi",
         "subscription_required": "⛔ Ushbu botdan foydalanish uchun {channel} ga obuna bo'lishingiz kerak.",
         "admin_menu": "🛠️ <b>Admin paneli</b>\n\n<b>Obunalar:</b>\n/add_sub - majburiy obuna qo'shish\n/remove_sub - obunani o'chirish\n/list_subs - obunalar ro'yxati\n\n<b>Boshqalar:</b>\n/broadcast - tarqatib yuborish\n/search - foydalanuvchini qidirish\n/clearcache - keshni tozalash",
-        "add_sub_prompt": "📌 Kanal/guruhning chat_id sini yuboring majburiy obuna qo'shish uchun.",
+        "add_sub_prompt": "📌 Kanal/guruhning chat_id sini yuboring majburiy obuna qo'shish uchun.\n\n⚠️ Avval botni o'sha kanal/guruhga admin qilib qo'shing (a'zolikni tekshirish va taklif havolasi yaratish uchun kerak), keyin uning raqamli ID'sini yuboring (masalan, -1001234567890).",
         "remove_sub_prompt": "🗑️ Obunadan o'chirish uchun chat_id yuboring.",
         "sub_added": "✅ Obuna qo'shildi: {chat_id}",
         "sub_removed": "✅ Obuna o'chirildi: {chat_id}",
         "list_subs": "📋 Majburiy obunalar:\n{subs}",
+        "check_subscription_button": "✅ A'zo bo'ldim — Qayta tekshirish",
+        "still_not_subscribed": "⛔ Siz hali barcha majburiy kanal/guruhlarga a'zo bo'lmadingiz.",
+        "subscription_confirmed": "✅ Rahmat! Endi davom etishingiz mumkin.",
+        "btn_template": "📋 Shablon",
+        "btn_delete": "🗑 Shablonni o'chirish",
+        "btn_lang": "🌐 Til",
+        "btn_help": "❓ Yordam",
+        "btn_admin": "🛠 Admin panel",
     },
 }
 
@@ -341,6 +367,11 @@ class Database:
                 );
                 """
             )
+            # Safe, idempotent migration for existing databases created before
+            # title/invite_link were tracked (needed to show users a proper
+            # "Join <channel name>" button instead of a bare chat_id).
+            await conn.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS title TEXT;")
+            await conn.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS invite_link TEXT;")
             await conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS user_languages (
@@ -457,18 +488,38 @@ class Database:
 
     # ---------------------------------------------------------- subscriptions --
 
-    async def add_subscription(self, chat_id: int, chat_type: str, required: bool = False) -> None:
-        """Add a mandatory subscription channel or group."""
+    async def add_subscription(
+        self,
+        chat_id: int,
+        chat_type: str,
+        required: bool = False,
+        title: Optional[str] = None,
+        invite_link: Optional[str] = None,
+    ) -> None:
+        """Add (or update, if it already exists) a mandatory subscription
+        channel or group."""
         async def _run():
             async with self.pool.acquire() as conn:  # type: ignore[union-attr]
-                await conn.execute(
-                    """
-                    INSERT INTO subscriptions (chat_id, chat_type, required)
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT DO NOTHING;
-                    """,
-                    chat_id, chat_type, required
+                existing = await conn.fetchrow(
+                    "SELECT id FROM subscriptions WHERE chat_id = $1;", chat_id
                 )
+                if existing:
+                    await conn.execute(
+                        """
+                        UPDATE subscriptions
+                        SET chat_type = $2, required = $3, title = $4, invite_link = $5
+                        WHERE chat_id = $1;
+                        """,
+                        chat_id, chat_type, required, title, invite_link,
+                    )
+                else:
+                    await conn.execute(
+                        """
+                        INSERT INTO subscriptions (chat_id, chat_type, required, title, invite_link)
+                        VALUES ($1, $2, $3, $4, $5);
+                        """,
+                        chat_id, chat_type, required, title, invite_link,
+                    )
         return await self._execute_with_retry(_run)
 
     async def remove_subscription(self, chat_id: int) -> None:
@@ -486,14 +537,15 @@ class Database:
                 return [dict(row) for row in rows]
         return await self._execute_with_retry(_run)
 
-    async def get_subscriptions_by_type(self, required: bool) -> list[int]:
-        """Get all subscription chat IDs by type (required or optional)."""
+    async def get_subscriptions_by_type(self, required: bool) -> list[dict]:
+        """Get all subscriptions (with title/invite_link) filtered by required flag."""
         async def _run():
             async with self.pool.acquire() as conn:  # type: ignore[union-attr]
                 rows = await conn.fetch(
-                    "SELECT chat_id FROM subscriptions WHERE required = $1;", required
+                    "SELECT chat_id, chat_type, title, invite_link FROM subscriptions WHERE required = $1;",
+                    required,
                 )
-                return [r["chat_id"] for r in rows]
+                return [dict(r) for r in rows]
         return await self._execute_with_retry(_run)
 
     # ---------------------------------------------------------- user languages --
@@ -1687,8 +1739,40 @@ def admin_panel_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(text="💾 Backup Database (SQL)", callback_data="admin:backup_db"),
         ],
+        [
+            InlineKeyboardButton(text="➕ Add Subscription", callback_data="admin:add_sub"),
+            InlineKeyboardButton(text="➖ Remove Subscription", callback_data="admin:remove_sub"),
+        ],
+        [
+            InlineKeyboardButton(text="📋 List Subscriptions", callback_data="admin:list_subs"),
+        ],
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def main_menu_keyboard(language: str, admin: bool) -> ReplyKeyboardMarkup:
+    """Persistent bottom keyboard shown instead of typed slash commands.
+    Regular users get the everyday actions; admins get an extra button that
+    opens the full inline admin panel (stats, broadcast, subscriptions, etc.)."""
+    rows = [
+        [KeyboardButton(text=t(language, "btn_template")), KeyboardButton(text=t(language, "btn_delete"))],
+        [KeyboardButton(text=t(language, "btn_lang")), KeyboardButton(text=t(language, "btn_help"))],
+    ]
+    if admin:
+        rows.append([KeyboardButton(text=t(language, "btn_admin"))])
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
+
+
+# Reverse lookup: button label (in any supported language) -> canonical action.
+# Built once at import time so button-tap handlers work regardless of which
+# language the user's keyboard is currently showing.
+BTN_LABEL_TO_ACTION: dict[str, str] = {}
+for _lang in SUPPORTED_LANGUAGES:
+    BTN_LABEL_TO_ACTION[TEXTS[_lang]["btn_template"]] = "template"
+    BTN_LABEL_TO_ACTION[TEXTS[_lang]["btn_delete"]] = "delete"
+    BTN_LABEL_TO_ACTION[TEXTS[_lang]["btn_lang"]] = "lang"
+    BTN_LABEL_TO_ACTION[TEXTS[_lang]["btn_help"]] = "help"
+    BTN_LABEL_TO_ACTION[TEXTS[_lang]["btn_admin"]] = "admin"
 
 
 async def safe_send(chat_id: int, text: str, **kwargs: Any) -> bool:
@@ -1714,6 +1798,74 @@ async def safe_send(chat_id: int, text: str, **kwargs: Any) -> bool:
 
 
 # ======================================================================================
+# MANDATORY SUBSCRIPTION ENFORCEMENT
+# ======================================================================================
+
+
+async def get_missing_subscriptions(telegram_id: int) -> list[dict]:
+    """Return the required subscriptions (channels/groups) this user has NOT
+    joined. If membership can't be verified for a given channel (most often
+    because the bot isn't an admin member there), that channel is skipped
+    rather than blocking every user -- a misconfigured channel shouldn't be
+    able to lock everyone out of the bot."""
+    required_subs = await db.get_subscriptions_by_type(True)
+    if not required_subs:
+        return []
+
+    missing: list[dict] = []
+    for sub in required_subs:
+        chat_id = sub["chat_id"]
+        try:
+            member = await bot.get_chat_member(chat_id, telegram_id)
+            status = member.status
+            not_a_member = status in ("left", "kicked") or (
+                status == "restricted" and not getattr(member, "is_member", True)
+            )
+            if not_a_member:
+                missing.append(sub)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[Subscription] Could not verify membership for chat %s (user %s): %s. "
+                "Skipping enforcement for this channel — make sure the bot is an "
+                "admin member of it.",
+                chat_id, telegram_id, exc,
+            )
+    return missing
+
+
+def build_subscription_message(missing_subs: list[dict], language: str) -> str:
+    names = ", ".join(sub.get("title") or str(sub["chat_id"]) for sub in missing_subs)
+    return t(language, "subscription_required", channel=names)
+
+
+def build_subscription_keyboard(missing_subs: list[dict], language: str) -> InlineKeyboardMarkup:
+    rows = []
+    for sub in missing_subs:
+        label = sub.get("title") or str(sub["chat_id"])
+        url = sub.get("invite_link")
+        if url:
+            rows.append([InlineKeyboardButton(text=f"➕ {label}", url=url)])
+    rows.append([InlineKeyboardButton(text=t(language, "check_subscription_button"), callback_data="check_subs")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def enforce_subscriptions(message: Message, language: str) -> bool:
+    """Gate: True if this user may proceed. If they're missing a required
+    subscription, prompts them to join and returns False so the caller stops
+    (never applies to the admin)."""
+    if is_admin(message.from_user.id):
+        return True
+    missing = await get_missing_subscriptions(message.from_user.id)
+    if not missing:
+        return True
+    await message.answer(
+        build_subscription_message(missing, language),
+        reply_markup=build_subscription_keyboard(missing, language),
+    )
+    return False
+
+
+# ======================================================================================
 # USER COMMAND HANDLERS
 # ======================================================================================
 
@@ -1735,25 +1887,15 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     # Save language preference
     await db.set_user_language(telegram_id, language)
 
-    await message.answer(t(language, "start_welcome"))
-    
-    # Show role-based commands menu
-    is_admin = telegram_id == ADMIN_ID
-    commands_text = "📋 <b>Komandalar / Commands / Команды:</b>\n\n"
-    commands_text += "/help - " + ("Help (English)" if language == "en" else "Помощь (Русский)" if language == "ru" else "Yordam (Uzbek)") + "\n"
-    commands_text += "/lang - " + ("Change language" if language == "en" else "Изменить язык" if language == "ru" else "Tilni o'zgartirish") + "\n"
-    commands_text += "/template - " + ("View/Set template" if language == "en" else "Просмотр/Установка шаблона" if language == "ru" else "Shablonni ko'rish/o'rnatish") + "\n"
-    commands_text += "/delete - " + ("Delete template" if language == "en" else "Удалить шаблон" if language == "ru" else "Shablonni o'chirish") + "\n"
-    
-    if is_admin:
-        commands_text += "\n🛠️ <b>Admin Commands:</b>\n"
-        commands_text += "/add_sub - Add subscription\n"
-        commands_text += "/remove_sub - Remove subscription\n"
-        commands_text += "/list_subs - List subscriptions\n"
-        commands_text += "/broadcast - Broadcast message\n"
-        commands_text += "/clearcache - Clear cache\n"
-    
-    await message.answer(commands_text, parse_mode="HTML")
+    # Mandatory subscription check (skipped for the admin)
+    if not await enforce_subscriptions(message, language):
+        return
+
+    user_is_admin = is_admin(telegram_id)
+    await message.answer(
+        t(language, "start_welcome"),
+        reply_markup=main_menu_keyboard(language, user_is_admin),
+    )
 
     template = await get_effective_template(telegram_id)
     if template:
@@ -1796,6 +1938,40 @@ async def handle_lang_select(query: CallbackQuery) -> None:
     # Map language code to display name
     lang_names = {"en": "English", "ru": "Русский", "uz": "Ўзбек"}
     await query.message.edit_text(t(lang_code, "language_set", lang=lang_names.get(lang_code, lang_code)))
+    # Button labels are per-language, so refresh the persistent keyboard too.
+    template = await get_effective_template(telegram_id)
+    prompt = t(lang_code, "ask_pdf") if template else t(lang_code, "ask_template")
+    await bot.send_message(
+        telegram_id,
+        prompt,
+        reply_markup=main_menu_keyboard(lang_code, is_admin(telegram_id)),
+    )
+
+
+@router.callback_query(F.data == "check_subs")
+async def handle_check_subs(callback: CallbackQuery, state: FSMContext) -> None:
+    """Re-check required subscriptions after the user taps 'I've joined'."""
+    telegram_id = callback.from_user.id
+    language = await db.get_user_language(telegram_id)
+
+    missing = await get_missing_subscriptions(telegram_id)
+    if missing:
+        await callback.answer(t(language, "still_not_subscribed"), show_alert=True)
+        return
+
+    await callback.answer(t(language, "subscription_confirmed"))
+    try:
+        await callback.message.delete()
+    except Exception:  # noqa: BLE001
+        pass
+
+    template = await get_effective_template(telegram_id)
+    if template:
+        await bot.send_message(telegram_id, t(language, "ask_pdf"))
+        await state.set_state(BotStates.waiting_for_pdf)
+    else:
+        await bot.send_message(telegram_id, t(language, "ask_template"))
+        await state.set_state(BotStates.waiting_for_template)
 
 
 @router.message(Command("add_sub"))
@@ -1813,17 +1989,59 @@ async def cmd_add_sub(message: Message, state: FSMContext) -> None:
 
 @router.message(BotStates.admin_waiting_add_sub, F.text)
 async def handle_add_sub(message: Message, state: FSMContext) -> None:
-    """Process subscription addition."""
+    """Process subscription addition: fetch the chat's title and build a
+    real join link (public @username, or an exported invite link) so users
+    can be shown a proper "Join <Channel Name>" button instead of a bare
+    chat_id."""
     language = await db.get_user_language(ADMIN_ID)
-    
+
     try:
         chat_id = int(message.text.strip())
-        await db.add_subscription(chat_id, "channel", required=True)
-        await message.answer(t(language, "sub_added", chat_id=chat_id))
     except ValueError:
-        await message.answer("❌ Invalid chat_id. Please send a number.")
+        await message.answer("❌ Invalid chat_id. Please send a number (e.g. -1001234567890).")
         return
-    
+
+    title: Optional[str] = None
+    invite_link: Optional[str] = None
+    chat_type = "channel"
+
+    try:
+        chat = await bot.get_chat(chat_id)
+        title = chat.title or chat.username or str(chat_id)
+        chat_type = chat.type or "channel"
+        if chat.username:
+            invite_link = f"https://t.me/{chat.username}"
+        else:
+            try:
+                invite_link = await bot.export_chat_invite_link(chat_id)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[Subscription] Could not export invite link for chat %s: %s. "
+                    "Bot needs to be an admin there with invite permissions.",
+                    chat_id, exc,
+                )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[Subscription] Could not fetch chat info for %s: %s. "
+            "The bot must be a member (ideally admin) of that channel/group "
+            "for subscription checks and invite links to work.",
+            chat_id, exc,
+        )
+
+    await db.add_subscription(chat_id, chat_type, required=True, title=title, invite_link=invite_link)
+
+    confirmation = t(language, "sub_added", chat_id=chat_id)
+    if title:
+        confirmation += f"\n📌 {title}"
+    if invite_link:
+        confirmation += f"\n🔗 {invite_link}"
+    else:
+        confirmation += (
+            "\n⚠️ Couldn't get an invite link — make sure the bot is an admin "
+            "in that channel/group (needed both to check membership and to "
+            "create an invite link), or make the channel public."
+        )
+    await message.answer(confirmation)
     await state.clear()
 
 
@@ -1871,17 +2089,25 @@ async def cmd_list_subs(message: Message) -> None:
         await message.answer("📋 No subscriptions configured.")
         return
     
-    subs_text = "\n".join([f"• {s['chat_id']} ({s['chat_type']})" for s in subs])
+    lines = []
+    for s in subs:
+        req = "required" if s["required"] else "optional"
+        label = s.get("title") or str(s["chat_id"])
+        line = f"• {label} ({s['chat_id']}, {s['chat_type']}, {req})"
+        if s.get("invite_link"):
+            line += f"\n  🔗 {s['invite_link']}"
+        lines.append(line)
+    subs_text = "\n".join(lines)
     await message.answer(t(language, "list_subs", subs=subs_text))
 
 
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
     language = await db.get_user_language(message.from_user.id)
-    is_admin = message.from_user.id == ADMIN_ID
+    user_is_admin = is_admin(message.from_user.id)
     
     help_text = t(language, "help_text")
-    if is_admin:
+    if user_is_admin:
         help_text += "\n\n" + t(language, "admin_menu")
     
     await message.answer(help_text)
@@ -1935,6 +2161,41 @@ async def cmd_admin(message: Message, state: FSMContext) -> None:
 
 
 # ======================================================================================
+# PERSISTENT-KEYBOARD BUTTON HANDLERS
+# ======================================================================================
+# These fire when the user taps a button on the bottom keyboard instead of
+# typing the equivalent slash command. Registered here (before the FSM
+# catch-all text handlers further down) so a button tap always wins over
+# "whatever state the user happens to be in", exactly like slash commands
+# already do.
+
+
+@router.message(F.text.func(lambda text: BTN_LABEL_TO_ACTION.get(text) == "help"))
+async def btn_help(message: Message) -> None:
+    await cmd_help(message)
+
+
+@router.message(F.text.func(lambda text: BTN_LABEL_TO_ACTION.get(text) == "lang"))
+async def btn_lang(message: Message, state: FSMContext) -> None:
+    await cmd_lang(message, state)
+
+
+@router.message(F.text.func(lambda text: BTN_LABEL_TO_ACTION.get(text) == "template"))
+async def btn_template(message: Message, state: FSMContext) -> None:
+    await cmd_template(message, state)
+
+
+@router.message(F.text.func(lambda text: BTN_LABEL_TO_ACTION.get(text) == "delete"))
+async def btn_delete(message: Message, state: FSMContext) -> None:
+    await cmd_delete(message, state)
+
+
+@router.message(F.text.func(lambda text: BTN_LABEL_TO_ACTION.get(text) == "admin"))
+async def btn_admin(message: Message, state: FSMContext) -> None:
+    await cmd_admin(message, state)
+
+
+# ======================================================================================
 # TEMPLATE INPUT HANDLER
 # ======================================================================================
 
@@ -1963,6 +2224,10 @@ async def handle_template_text(message: Message, state: FSMContext) -> None:
 async def handle_document(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
     language = await db.get_user_language(telegram_id)
+
+    if not await enforce_subscriptions(message, language):
+        return
+
     document: Document = message.document
 
     file_name = document.file_name or ""
@@ -2148,6 +2413,29 @@ async def handle_admin_callback(callback: CallbackQuery, state: FSMContext) -> N
 
     elif action == "backup_db":
         await backup_database_sql(callback)
+
+    elif action == "add_sub":
+        await state.set_state(BotStates.admin_waiting_add_sub)
+        await callback.message.answer(t("en", "add_sub_prompt"))
+
+    elif action == "remove_sub":
+        await state.set_state(BotStates.admin_waiting_remove_sub)
+        await callback.message.answer(t("en", "remove_sub_prompt"))
+
+    elif action == "list_subs":
+        subs = await db.get_subscriptions()
+        if not subs:
+            await callback.message.answer("📋 No subscriptions configured.")
+        else:
+            lines = []
+            for s in subs:
+                req = "required" if s["required"] else "optional"
+                label = s.get("title") or str(s["chat_id"])
+                line = f"• {label} ({s['chat_id']}, {s['chat_type']}, {req})"
+                if s.get("invite_link"):
+                    line += f"\n  🔗 {s['invite_link']}"
+                lines.append(line)
+            await callback.message.answer(t("en", "list_subs", subs="\n".join(lines)))
 
     else:
         logger.warning("Unknown admin action: %s", action)
