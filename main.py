@@ -69,7 +69,7 @@ load_dotenv()
 
 BOT_TOKEN: str = os.getenv("BOT_TOKEN", "").strip()
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.5-flash").strip()
+GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite").strip()
 DATABASE_URL: str = os.getenv("DATABASE_URL", "").strip()
 ADMIN_ID_RAW: str = os.getenv("ADMIN_ID", "0").strip()
 
@@ -175,7 +175,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "need_template_first": "Сначала настроим шаблон. Пришлите ваш шаблон Load Confirmation в виде текста.",
         "ors_error": "❌ Не удалось рассчитать пробег для этих адресов. Проверьте адреса погрузки/выгрузки в PDF.",
         "gemini_error": "❌ Не удалось сгенерировать Load Confirmation (ошибка ИИ-сервиса). Попробуйте ещё раз.",
-        "generic_error": "❌ Произошла ��шибка при обработке запроса. Попробуйте снова.",
+        "generic_error": "❌ Произошла ошибка при обработке запроса. Попробуйте снова.",
         "result_ready": "✅ Ваш Load Confirmation готов:",
         "extracted_missing": "⚠️ Некоторые поля не найдены в PDF и оставлены пустыми. Проверьте результат.",
         "admin_panel_title": "🛠️ <b>Панель администратора</b>",
@@ -1365,7 +1365,7 @@ def _is_quota_exhausted(exc: Exception) -> bool:
     """True if this is a Gemini 429 RESOURCE_EXHAUSTED quota error.
 
     These happen when the API key's daily/per-minute request quota (e.g. the
-    free tier's 20 requests/day limit for a model) has been used up.
+    free tier's requests/day limit for a model) has been used up.
     Retrying with exponential backoff is pointless here: the quota won't
     reset in the ~60s the backoff schedule covers, so we should fail fast
     and let the caller fall back to regex extraction immediately instead of
@@ -1380,6 +1380,27 @@ def _is_quota_exhausted(exc: Exception) -> bool:
         or "RESOURCE_EXHAUSTED" in message
         or "exceeded your current quota" in message
     )
+
+
+def _is_model_unavailable(exc: Exception) -> bool:
+    """True if Gemini returned a 404 because the configured model name is
+    deprecated / no longer available (e.g. Google retiring a model for new
+    users). This is a deterministic, permanent failure for the current
+    request -- retrying the same model name will never succeed, so fail
+    fast instead of burning the full 6-attempt backoff schedule."""
+    code = getattr(exc, "code", None)
+    status = getattr(exc, "status", "") or ""
+    message = str(exc)
+    return (
+        code == 404
+        or "NOT_FOUND" in status
+        or "is no longer available" in message
+        or "not found for API version" in message
+    )
+
+
+def _is_nonretryable_gemini_error(exc: Exception) -> bool:
+    return _is_quota_exhausted(exc) or _is_model_unavailable(exc)
 
 
 async def extract_shipment_via_gemini_pdf(pdf_bytes: bytes) -> ShipmentData:
@@ -1449,6 +1470,15 @@ async def extract_shipment_via_gemini_pdf(pdf_bytes: bytes) -> ShipmentData:
         except Exception as exc:  # noqa: BLE001
             last_error = exc
             exc_type = type(exc).__name__
+            if _is_model_unavailable(exc):
+                logger.error(
+                    "[Gemini] Extraction stopped early on attempt %d: model '%s' is unavailable/deprecated (%s). "
+                    "Not retrying — set a currently-supported model via the GEMINI_MODEL env var.",
+                    attempt + 1,
+                    GEMINI_MODEL_NAME,
+                    str(exc)[:150],
+                )
+                break
             if _is_quota_exhausted(exc):
                 logger.error(
                     "[Gemini] Extraction stopped early on attempt %d: quota exhausted (%s). "
@@ -1538,6 +1568,15 @@ async def generate_load_confirmation(template: str, data: ShipmentData) -> str:
         except Exception as exc:  # noqa: BLE001
             last_error = exc
             exc_type = type(exc).__name__
+            if _is_model_unavailable(exc):
+                logger.error(
+                    "[Gemini] Generation stopped early on attempt %d: model '%s' is unavailable/deprecated (%s). "
+                    "Not retrying — set a currently-supported model via the GEMINI_MODEL env var.",
+                    attempt + 1,
+                    GEMINI_MODEL_NAME,
+                    str(exc)[:150],
+                )
+                break
             if _is_quota_exhausted(exc):
                 logger.error(
                     "[Gemini] Generation stopped early on attempt %d: quota exhausted (%s). "
