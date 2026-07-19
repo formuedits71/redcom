@@ -55,6 +55,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
+    ChatJoinRequest,
     Document,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -144,11 +145,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "view_template_prompt": "Send the Telegram ID of the user whose template you want to view.",
         "admin_action_done": "✅ Done.",
         "choose_language": "🌐 Choose language / Выберите язык / Tilni tanlang",
-        "language_set": "✅ Language set to {lang}",
+        "language_set": "✅ Language set to {lang_name}",
         "subscription_required": "⛔ You must subscribe to {channel} to use this bot.",
         "admin_menu": "🛠️ <b>Admin Panel</b>\n\n<b>Subscriptions:</b>\n/add_sub - add mandatory subscription\n/remove_sub - remove subscription\n/list_subs - list subscriptions\n\n<b>Other:</b>\n/broadcast - broadcast message\n/search - search user\n/clearcache - clear cache",
         "add_sub_prompt": "📌 Send chat_id of the channel/group to add as a mandatory subscription.\n\n⚠️ First add this bot as an admin of that channel/group (needed to check membership and to create an invite link), then send its numeric ID (e.g. -1001234567890).",
-        "remove_sub_prompt": "🗑️ Send chat_id to remove from subscriptions.",
+        "remove_sub_prompt": "🗑️ Tap a channel/group below to remove it from mandatory subscriptions.",
         "sub_added": "✅ Subscription added: {chat_id}",
         "sub_removed": "✅ Subscription removed: {chat_id}",
         "list_subs": "📋 Mandatory subscriptions:\n{subs}",
@@ -160,6 +161,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_lang": "🌐 Language",
         "btn_help": "❓ Help",
         "btn_admin": "🛠 Admin Panel",
+        "sub_join_request_mode": "ℹ️ Private chat — users only need to send a join request (not actually join) to satisfy this.",
     },
     "ru": {
         "start_welcome": "👋 Добро пожаловать в Load Confirmation Bot!\n\nЯ превращаю ваши PDF rate confirmation в готовый Load Confirmation в вашем собственном формате.",
@@ -198,11 +200,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "view_template_prompt": "Отправьте Telegram ID пользователя, чей шаблон нужно посмотреть.",
         "admin_action_done": "✅ Готово.",
         "choose_language": "🌐 Выберите язык / Choose language / Tilni tanlang",
-        "language_set": "✅ Язык установлен на {lang}",
+        "language_set": "✅ Язык установлен на {lang_name}",
         "subscription_required": "⛔ Вы должны подписаться на {channel} для использования этого бота.",
         "admin_menu": "🛠️ <b>Админ-панель</b>\n\n<b>Подписки:</b>\n/add_sub - добавить обязательную подписку\n/remove_sub - удалить подписку\n/list_subs - список подписок\n\n<b>Другое:</b>\n/broadcast - рассылка\n/search - поиск пользователя\n/clearache - очистить кэш",
         "add_sub_prompt": "📌 Отправьте chat_id канала/группы для добавления как обязательную подписку.\n\n⚠️ Сначала добавьте этого бота администратором в этот канал/группу (нужно для проверки подписки и создания ссылки-приглашения), затем отправьте его числовой ID (например, -1001234567890).",
-        "remove_sub_prompt": "🗑️ Отправьте chat_id для удаления из подписок.",
+        "remove_sub_prompt": "🗑️ Нажмите на канал/группу ниже, чтобы удалить из обязательных подписок.",
         "sub_added": "✅ Подписка добавлена: {chat_id}",
         "sub_removed": "✅ Подписка удалена: {chat_id}",
         "list_subs": "📋 Обязательные подписки:\n{subs}",
@@ -214,6 +216,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_lang": "🌐 Язык",
         "btn_help": "❓ Помощь",
         "btn_admin": "🛠 Админ-панель",
+        "sub_join_request_mode": "ℹ️ Приватный чат — пользователям достаточно отправить заявку на вступление (не обязательно вступать), чтобы выполнить это условие.",
     },
     "uz": {
         "start_welcome": "👋 Load Confirmation Bot-ga xush kelibsiz!\n\nMen sizning PDF rate confirmation hujjatingizni o'z formatingizda tayyor Load Confirmation-ga aylantiraman.",
@@ -252,11 +255,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "view_template_prompt": "Shablonini ko'rish kerak bo'lgan foydalanuvchining Telegram ID sini yuboring.",
         "admin_action_done": "✅ Bajarildi.",
         "choose_language": "🌐 Tilni tanlang / Choose language / Выберите язык",
-        "language_set": "✅ Til {lang} ga o'rnatildi",
+        "language_set": "✅ Til {lang_name} ga o'rnatildi",
         "subscription_required": "⛔ Ushbu botdan foydalanish uchun {channel} ga obuna bo'lishingiz kerak.",
         "admin_menu": "🛠️ <b>Admin paneli</b>\n\n<b>Obunalar:</b>\n/add_sub - majburiy obuna qo'shish\n/remove_sub - obunani o'chirish\n/list_subs - obunalar ro'yxati\n\n<b>Boshqalar:</b>\n/broadcast - tarqatib yuborish\n/search - foydalanuvchini qidirish\n/clearcache - keshni tozalash",
         "add_sub_prompt": "📌 Kanal/guruhning chat_id sini yuboring majburiy obuna qo'shish uchun.\n\n⚠️ Avval botni o'sha kanal/guruhga admin qilib qo'shing (a'zolikni tekshirish va taklif havolasi yaratish uchun kerak), keyin uning raqamli ID'sini yuboring (masalan, -1001234567890).",
-        "remove_sub_prompt": "🗑️ Obunadan o'chirish uchun chat_id yuboring.",
+        "remove_sub_prompt": "🗑️ Majburiy obunalardan o'chirish uchun quyidagi kanal/guruhga bosing.",
         "sub_added": "✅ Obuna qo'shildi: {chat_id}",
         "sub_removed": "✅ Obuna o'chirildi: {chat_id}",
         "list_subs": "📋 Majburiy obunalar:\n{subs}",
@@ -268,6 +271,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "btn_lang": "🌐 Til",
         "btn_help": "❓ Yordam",
         "btn_admin": "🛠 Admin panel",
+        "sub_join_request_mode": "ℹ️ Maxfiy chat — foydalanuvchilar bu shartni bajarish uchun faqat qo'shilish so'rovini yuborsa yetarli (haqiqatan a'zo bo'lish shart emas).",
     },
 }
 
@@ -372,6 +376,25 @@ class Database:
             # "Join <channel name>" button instead of a bare chat_id).
             await conn.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS title TEXT;")
             await conn.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS invite_link TEXT;")
+            # requires_join_request = TRUE means this is a private channel/group
+            # where users can't just be checked via get_chat_member (they were
+            # never asked to actually join) -- instead they only need to have
+            # sent a join request via the invite link, which we track ourselves
+            # in join_requests below (Telegram doesn't expose "pending request"
+            # through get_chat_member).
+            await conn.execute(
+                "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS requires_join_request BOOLEAN DEFAULT FALSE;"
+            )
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS join_requests (
+                    chat_id BIGINT NOT NULL,
+                    telegram_id BIGINT NOT NULL,
+                    requested_at TIMESTAMP DEFAULT NOW(),
+                    PRIMARY KEY (chat_id, telegram_id)
+                );
+                """
+            )
             await conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS user_languages (
@@ -495,6 +518,7 @@ class Database:
         required: bool = False,
         title: Optional[str] = None,
         invite_link: Optional[str] = None,
+        requires_join_request: bool = False,
     ) -> None:
         """Add (or update, if it already exists) a mandatory subscription
         channel or group."""
@@ -507,18 +531,20 @@ class Database:
                     await conn.execute(
                         """
                         UPDATE subscriptions
-                        SET chat_type = $2, required = $3, title = $4, invite_link = $5
+                        SET chat_type = $2, required = $3, title = $4, invite_link = $5,
+                            requires_join_request = $6
                         WHERE chat_id = $1;
                         """,
-                        chat_id, chat_type, required, title, invite_link,
+                        chat_id, chat_type, required, title, invite_link, requires_join_request,
                     )
                 else:
                     await conn.execute(
                         """
-                        INSERT INTO subscriptions (chat_id, chat_type, required, title, invite_link)
-                        VALUES ($1, $2, $3, $4, $5);
+                        INSERT INTO subscriptions
+                            (chat_id, chat_type, required, title, invite_link, requires_join_request)
+                        VALUES ($1, $2, $3, $4, $5, $6);
                         """,
-                        chat_id, chat_type, required, title, invite_link,
+                        chat_id, chat_type, required, title, invite_link, requires_join_request,
                     )
         return await self._execute_with_retry(_run)
 
@@ -538,14 +564,47 @@ class Database:
         return await self._execute_with_retry(_run)
 
     async def get_subscriptions_by_type(self, required: bool) -> list[dict]:
-        """Get all subscriptions (with title/invite_link) filtered by required flag."""
+        """Get all subscriptions (with title/invite_link/requires_join_request) filtered by required flag."""
         async def _run():
             async with self.pool.acquire() as conn:  # type: ignore[union-attr]
                 rows = await conn.fetch(
-                    "SELECT chat_id, chat_type, title, invite_link FROM subscriptions WHERE required = $1;",
+                    """
+                    SELECT chat_id, chat_type, title, invite_link, requires_join_request
+                    FROM subscriptions WHERE required = $1;
+                    """,
                     required,
                 )
                 return [dict(r) for r in rows]
+        return await self._execute_with_retry(_run)
+
+    # ------------------------------------------------------------ join requests --
+
+    async def record_join_request(self, chat_id: int, telegram_id: int) -> None:
+        """Record that a user sent a join request to a (private) mandatory
+        channel/group. Used to satisfy the subscription check without
+        requiring them to actually be a member (they may be pending admin
+        approval indefinitely, which is fine for our purposes)."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                await conn.execute(
+                    """
+                    INSERT INTO join_requests (chat_id, telegram_id)
+                    VALUES ($1, $2)
+                    ON CONFLICT (chat_id, telegram_id) DO UPDATE SET requested_at = NOW();
+                    """,
+                    chat_id, telegram_id,
+                )
+        return await self._execute_with_retry(_run)
+
+    async def has_join_request(self, chat_id: int, telegram_id: int) -> bool:
+        """True if this user has ever sent a join request to this chat."""
+        async def _run():
+            async with self.pool.acquire() as conn:  # type: ignore[union-attr]
+                row = await conn.fetchrow(
+                    "SELECT 1 FROM join_requests WHERE chat_id = $1 AND telegram_id = $2;",
+                    chat_id, telegram_id,
+                )
+                return row is not None
         return await self._execute_with_retry(_run)
 
     # ---------------------------------------------------------- user languages --
@@ -1804,10 +1863,18 @@ async def safe_send(chat_id: int, text: str, **kwargs: Any) -> bool:
 
 async def get_missing_subscriptions(telegram_id: int) -> list[dict]:
     """Return the required subscriptions (channels/groups) this user has NOT
-    joined. If membership can't be verified for a given channel (most often
-    because the bot isn't an admin member there), that channel is skipped
-    rather than blocking every user -- a misconfigured channel shouldn't be
-    able to lock everyone out of the bot."""
+    satisfied yet.
+
+    - Public channels/groups: verified via get_chat_member (the user must
+      have actually joined).
+    - Private channels/groups (requires_join_request=True): verified via our
+      own join_requests table -- the user only needs to have *sent* a join
+      request, not actually be let in.
+
+    If membership can't be verified for a given channel (most often because
+    the bot isn't an admin member there), that channel is skipped rather
+    than blocking every user -- a misconfigured channel shouldn't be able to
+    lock everyone out of the bot."""
     required_subs = await db.get_subscriptions_by_type(True)
     if not required_subs:
         return []
@@ -1815,6 +1882,13 @@ async def get_missing_subscriptions(telegram_id: int) -> list[dict]:
     missing: list[dict] = []
     for sub in required_subs:
         chat_id = sub["chat_id"]
+
+        if sub.get("requires_join_request"):
+            has_requested = await db.has_join_request(chat_id, telegram_id)
+            if not has_requested:
+                missing.append(sub)
+            continue
+
         try:
             member = await bot.get_chat_member(chat_id, telegram_id)
             status = member.status
@@ -1863,6 +1937,20 @@ async def enforce_subscriptions(message: Message, language: str) -> bool:
         reply_markup=build_subscription_keyboard(missing, language),
     )
     return False
+
+
+@router.chat_join_request()
+async def handle_chat_join_request(update: ChatJoinRequest) -> None:
+    """Fires when a user submits a join request to any chat the bot is an
+    admin of. We record it (so get_missing_subscriptions can treat it as
+    satisfying a private/requires_join_request subscription) -- we do NOT
+    approve or decline the request ourselves; that stays up to whoever
+    manages the channel."""
+    await db.record_join_request(update.chat.id, update.from_user.id)
+    logger.info(
+        "[Subscription] Recorded join request: user %s -> chat %s (%s)",
+        update.from_user.id, update.chat.id, update.chat.title,
+    )
 
 
 # ======================================================================================
@@ -1937,7 +2025,7 @@ async def handle_lang_select(query: CallbackQuery) -> None:
     await query.answer()
     # Map language code to display name
     lang_names = {"en": "English", "ru": "Русский", "uz": "Ўзбек"}
-    await query.message.edit_text(t(lang_code, "language_set", lang=lang_names.get(lang_code, lang_code)))
+    await query.message.edit_text(t(lang_code, "language_set", lang_name=lang_names.get(lang_code, lang_code)))
     # Button labels are per-language, so refresh the persistent keyboard too.
     template = await get_effective_template(telegram_id)
     prompt = t(lang_code, "ask_pdf") if template else t(lang_code, "ask_template")
@@ -1990,9 +2078,17 @@ async def cmd_add_sub(message: Message, state: FSMContext) -> None:
 @router.message(BotStates.admin_waiting_add_sub, F.text)
 async def handle_add_sub(message: Message, state: FSMContext) -> None:
     """Process subscription addition: fetch the chat's title and build a
-    real join link (public @username, or an exported invite link) so users
-    can be shown a proper "Join <Channel Name>" button instead of a bare
-    chat_id."""
+    real join link so users can be shown a proper "Join <Channel Name>"
+    button instead of a bare chat_id.
+
+    - Public channel/group (has @username): normal join link, verified via
+      get_chat_member (the user actually becomes a member).
+    - Private channel/group (no @username): a *join-request* invite link
+      (creates_join_request=True) is created instead. The user only needs
+      to submit a join request — they don't have to actually be let in —
+      and we verify that via our own join_requests table, since Telegram
+      doesn't expose "has a pending request" through get_chat_member.
+    """
     language = await db.get_user_language(ADMIN_ID)
 
     try:
@@ -2004,20 +2100,27 @@ async def handle_add_sub(message: Message, state: FSMContext) -> None:
     title: Optional[str] = None
     invite_link: Optional[str] = None
     chat_type = "channel"
+    requires_join_request = False
 
     try:
         chat = await bot.get_chat(chat_id)
         title = chat.title or chat.username or str(chat_id)
         chat_type = chat.type or "channel"
         if chat.username:
+            # Public — a normal join works, so a normal membership check
+            # (get_chat_member) is enough.
             invite_link = f"https://t.me/{chat.username}"
         else:
+            # Private — ask users to submit a join request rather than
+            # requiring them to actually be added to the chat.
+            requires_join_request = True
             try:
-                invite_link = await bot.export_chat_invite_link(chat_id)
+                link_obj = await bot.create_chat_invite_link(chat_id, creates_join_request=True)
+                invite_link = link_obj.invite_link
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
-                    "[Subscription] Could not export invite link for chat %s: %s. "
-                    "Bot needs to be an admin there with invite permissions.",
+                    "[Subscription] Could not create a join-request invite link for chat %s: %s. "
+                    "Bot needs to be an admin there with 'invite users' permission.",
                     chat_id, exc,
                 )
     except Exception as exc:  # noqa: BLE001
@@ -2028,13 +2131,18 @@ async def handle_add_sub(message: Message, state: FSMContext) -> None:
             chat_id, exc,
         )
 
-    await db.add_subscription(chat_id, chat_type, required=True, title=title, invite_link=invite_link)
+    await db.add_subscription(
+        chat_id, chat_type, required=True, title=title, invite_link=invite_link,
+        requires_join_request=requires_join_request,
+    )
 
     confirmation = t(language, "sub_added", chat_id=chat_id)
     if title:
         confirmation += f"\n📌 {title}"
     if invite_link:
         confirmation += f"\n🔗 {invite_link}"
+        if requires_join_request:
+            confirmation += "\n" + t(language, "sub_join_request_mode")
     else:
         confirmation += (
             "\n⚠️ Couldn't get an invite link — make sure the bot is an admin "
@@ -2045,60 +2153,95 @@ async def handle_add_sub(message: Message, state: FSMContext) -> None:
     await state.clear()
 
 
+def build_subscriptions_picker_keyboard(subs: list[dict], action_prefix: str) -> InlineKeyboardMarkup:
+    """One button per subscription, labeled with its name (not its bare
+    chat_id) so the admin can tap instead of having to type/copy IDs."""
+    rows = []
+    for s in subs:
+        label = s.get("title") or str(s["chat_id"])
+        req_mark = "🔒" if s.get("required") else "🔓"
+        rows.append(
+            [InlineKeyboardButton(text=f"{req_mark} {label}", callback_data=f"{action_prefix}:{s['chat_id']}")]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 @router.message(Command("remove_sub"))
 async def cmd_remove_sub(message: Message, state: FSMContext) -> None:
-    """Admin: remove subscription."""
+    """Admin: remove subscription — pick by name instead of typing chat_id."""
     if message.from_user.id != ADMIN_ID:
         language = await db.get_user_language(message.from_user.id)
         await message.answer(t(language, "admin_denied"))
         return
-    
-    language = await db.get_user_language(ADMIN_ID)
-    await message.answer(t(language, "remove_sub_prompt"))
-    await state.set_state(BotStates.admin_waiting_remove_sub)
 
-
-@router.message(BotStates.admin_waiting_remove_sub, F.text)
-async def handle_remove_sub(message: Message, state: FSMContext) -> None:
-    """Process subscription removal."""
-    language = await db.get_user_language(ADMIN_ID)
-    
-    try:
-        chat_id = int(message.text.strip())
-        await db.remove_subscription(chat_id)
-        await message.answer(t(language, "sub_removed", chat_id=chat_id))
-    except ValueError:
-        await message.answer("❌ Invalid chat_id. Please send a number.")
+    subs = await db.get_subscriptions()
+    if not subs:
+        await message.answer("📋 No subscriptions configured.")
         return
-    
-    await state.clear()
+    await message.answer(
+        t(await db.get_user_language(ADMIN_ID), "remove_sub_prompt"),
+        reply_markup=build_subscriptions_picker_keyboard(subs, "rmsub"),
+    )
+
+
+@router.callback_query(F.data.startswith("rmsub:"))
+async def handle_remove_sub_button(callback: CallbackQuery) -> None:
+    """Admin tapped a channel/group name to remove it from subscriptions."""
+    if not is_admin(callback.from_user.id):
+        await callback.answer(t("en", "admin_denied"), show_alert=True)
+        return
+
+    chat_id = int(callback.data.split(":", 1)[1])
+    language = await db.get_user_language(ADMIN_ID)
+    await db.remove_subscription(chat_id)
+    await callback.answer(t(language, "sub_removed", chat_id=chat_id))
+    try:
+        await callback.message.delete()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @router.message(Command("list_subs"))
 async def cmd_list_subs(message: Message) -> None:
-    """Admin: list all subscriptions."""
+    """Admin: list all subscriptions as name buttons (tap one for details)."""
     if message.from_user.id != ADMIN_ID:
         language = await db.get_user_language(message.from_user.id)
         await message.answer(t(language, "admin_denied"))
         return
-    
-    language = await db.get_user_language(ADMIN_ID)
+
     subs = await db.get_subscriptions()
-    
     if not subs:
         await message.answer("📋 No subscriptions configured.")
         return
-    
-    lines = []
-    for s in subs:
-        req = "required" if s["required"] else "optional"
-        label = s.get("title") or str(s["chat_id"])
-        line = f"• {label} ({s['chat_id']}, {s['chat_type']}, {req})"
-        if s.get("invite_link"):
-            line += f"\n  🔗 {s['invite_link']}"
-        lines.append(line)
-    subs_text = "\n".join(lines)
-    await message.answer(t(language, "list_subs", subs=subs_text))
+
+    await message.answer(
+        "📋 Tap a channel/group for details (🔒 = required, 🔓 = optional):",
+        reply_markup=build_subscriptions_picker_keyboard(subs, "subinfo"),
+    )
+
+
+@router.callback_query(F.data.startswith("subinfo:"))
+async def handle_sub_info_button(callback: CallbackQuery) -> None:
+    """Admin tapped a channel/group name in the list to see its details."""
+    if not is_admin(callback.from_user.id):
+        await callback.answer(t("en", "admin_denied"), show_alert=True)
+        return
+
+    chat_id = int(callback.data.split(":", 1)[1])
+    subs = await db.get_subscriptions()
+    sub = next((s for s in subs if s["chat_id"] == chat_id), None)
+    if not sub:
+        await callback.answer("Not found — it may have just been removed.", show_alert=True)
+        return
+
+    label = sub.get("title") or str(chat_id)
+    req = "Required" if sub.get("required") else "Optional"
+    mode = "Join request" if sub.get("requires_join_request") else "Direct membership"
+    details = f"📌 {label}\nID: {chat_id}\nType: {sub['chat_type']}\n{req} • {mode}"
+    if sub.get("invite_link"):
+        details += f"\n🔗 {sub['invite_link']}"
+    await callback.answer()
+    await callback.message.answer(details)
 
 
 @router.message(Command("help"))
@@ -2419,23 +2562,24 @@ async def handle_admin_callback(callback: CallbackQuery, state: FSMContext) -> N
         await callback.message.answer(t("en", "add_sub_prompt"))
 
     elif action == "remove_sub":
-        await state.set_state(BotStates.admin_waiting_remove_sub)
-        await callback.message.answer(t("en", "remove_sub_prompt"))
+        subs = await db.get_subscriptions()
+        if not subs:
+            await callback.message.answer("📋 No subscriptions configured.")
+        else:
+            await callback.message.answer(
+                t("en", "remove_sub_prompt"),
+                reply_markup=build_subscriptions_picker_keyboard(subs, "rmsub"),
+            )
 
     elif action == "list_subs":
         subs = await db.get_subscriptions()
         if not subs:
             await callback.message.answer("📋 No subscriptions configured.")
         else:
-            lines = []
-            for s in subs:
-                req = "required" if s["required"] else "optional"
-                label = s.get("title") or str(s["chat_id"])
-                line = f"• {label} ({s['chat_id']}, {s['chat_type']}, {req})"
-                if s.get("invite_link"):
-                    line += f"\n  🔗 {s['invite_link']}"
-                lines.append(line)
-            await callback.message.answer(t("en", "list_subs", subs="\n".join(lines)))
+            await callback.message.answer(
+                "📋 Tap a channel/group for details (🔒 = required, 🔓 = optional):",
+                reply_markup=build_subscriptions_picker_keyboard(subs, "subinfo"),
+            )
 
     else:
         logger.warning("Unknown admin action: %s", action)
